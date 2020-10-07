@@ -41,4 +41,4 @@ if __name__ == '__main__':
                 'trailing 100 games avg %.3f' % avg_score)
 
     x = [i+1 for i in range(n_games)]
-    plot_learning_curve(x, scores, figure_file)
+    plot_learning_curve(x, score_history, figure_file)
