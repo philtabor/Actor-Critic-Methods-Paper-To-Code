@@ -16,7 +16,7 @@ class Agent():
         self.alpha = alpha
         self.beta = beta
 
-        self.memory = ReplayBuffer(max_size, input_dims, n_actions)
+        self.memory = ReplayBuffer(max_size, input_dims, n_actions, name="memory")
 
         self.noise = OUActionNoise(mu=np.zeros(n_actions))
 
@@ -51,12 +51,14 @@ class Agent():
         self.target_actor.save_checkpoint()
         self.critic.save_checkpoint()
         self.target_critic.save_checkpoint()
+        self.memory.save_memory()       #save the entire replaybuffer to facilitate resume training
 
     def load_models(self):
         self.actor.load_checkpoint()
         self.target_actor.load_checkpoint()
         self.critic.load_checkpoint()
         self.target_critic.load_checkpoint()
+        self.memory.load_memory()       #load the entire replaybuffer to facilitate resume training
 
     def learn(self):
         if self.memory.mem_cntr < self.batch_size:
