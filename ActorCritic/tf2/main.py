@@ -1,24 +1,29 @@
 import gym
 import numpy as np
-from actor_critic import Agent
-from utils import plot_learning_curve
+from agent import Agent
+from utils import plot_learning_curve, manage_memory
 from gym import wrappers
 
 if __name__ == '__main__':
-    #env = gym.make('LunarLander-v2')
+    manage_memory()
+    # env = gym.make('LunarLander-v2')
     env = gym.make('CartPole-v0')
     agent = Agent(alpha=1e-5, n_actions=env.action_space.n)
     n_games = 1800
-    # uncomment this line and do a mkdir tmp && mkdir video if you want to
-    # record video of the agent playing the game.
-    #env = wrappers.Monitor(env, 'tmp/video', video_callable=lambda episode_id: True, force=True)
+    record_video = False
+    load_checkpoint = False
+
+    # do a mkdir video if you want to record video of the agent playing
+    if record_video:
+        env = wrappers.Monitor(env, 'video',
+                               video_callable=lambda episode_id: True,
+                               force=True)
     filename = 'cartpole_1e-5_1024x512_1800games.png'
 
     figure_file = 'plots/' + filename
 
     best_score = env.reward_range[0]
     score_history = []
-    load_checkpoint = False
 
     if load_checkpoint:
         agent.load_models()
@@ -41,8 +46,8 @@ if __name__ == '__main__':
             best_score = avg_score
             if not load_checkpoint:
                 agent.save_models()
-
-        print('episode ', i, 'score %.1f' % score, 'avg_score %.1f' % avg_score)
+        print('episode {} score {:.1f} avg score {:.1f}'.format(
+              i, score, avg_score))
 
     if not load_checkpoint:
         x = [i+1 for i in range(n_games)]
