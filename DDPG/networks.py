@@ -13,9 +13,10 @@ class CriticNetwork(nn.Module):
         self.fc1_dims = fc1_dims
         self.fc2_dims = fc2_dims
         self.n_actions = n_actions
-        self.name = name
+        self.name = name + '_ddpg'      #adds the "_ddpg" to the original name for consistency
         self.checkpoint_dir = chkpt_dir
-        self.checkpoint_file = os.path.join(self.checkpoint_dir, name+'_ddpg')
+        self.checkpoint_file = os.path.join(self.checkpoint_dir, self.name)
+        self.checkpoint_file_best = os.path.join(self.checkpoint_dir, "best", self.name)    #places the same filenames, but in a sub-folder called "best"
 
         self.fc1 = nn.Linear(*self.input_dims, self.fc1_dims)
         self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
@@ -47,7 +48,7 @@ class CriticNetwork(nn.Module):
 
         self.optimizer = optim.Adam(self.parameters(), lr=beta,
                                     weight_decay=0.01)
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cuda:1')
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')     #if cuda is not available, we should use 'cpu' instead
 
         self.to(self.device)
 
@@ -68,16 +69,22 @@ class CriticNetwork(nn.Module):
 
     def save_checkpoint(self):
         print('... saving checkpoint ...')
-        T.save(self.state_dict(), self.checkpoint_file)
-
+        #for resumption of training, the optimizer is necessary to be saved to aid in retraining. 
+        #Otherwise, the network will go through all the 'lessons learnt' from the past again.
+        T.save({self.name + "_model_state_dict": self.state_dict(),
+                self.name + "_optim_state_dict": self.optimizer.state_dict()},  
+                self.checkpoint_file)
+        
     def load_checkpoint(self):
         print('... loading checkpoint ...')
-        self.load_state_dict(T.load(self.checkpoint_file))
-
+        saved_data = T.load(self.checkpoint_file)
+        self.load_state_dict(saved_data[self.name + "_model_state_dict"])
+        self.optimizer.load_state_dict(saved_data[self.name + "_optim_state_dict"])
+        self.train()     #puts the network in a training mode.
+        
     def save_best(self):
         print('... saving best checkpoint ...')
-        checkpoint_file = os.path.join(self.checkpoint_dir, self.name+'_best')
-        T.save(self.state_dict(), checkpoint_file)
+        T.save(self.state_dict(), self.checkpoint_file_best)    #places the same filenames, but in a sub-folder called "best"
 
 class ActorNetwork(nn.Module):
     def __init__(self, alpha, input_dims, fc1_dims, fc2_dims, n_actions, name,
@@ -87,9 +94,10 @@ class ActorNetwork(nn.Module):
         self.fc1_dims = fc1_dims
         self.fc2_dims = fc2_dims
         self.n_actions = n_actions
-        self.name = name
+        self.name = name + '_ddpg'      #adds the "_ddpg" to the original name for consistency
         self.checkpoint_dir = chkpt_dir
-        self.checkpoint_file = os.path.join(self.checkpoint_dir, name+'_ddpg')
+        self.checkpoint_file = os.path.join(self.checkpoint_dir, self.name)
+        self.checkpoint_file_best = os.path.join(self.checkpoint_dir, "best", self.name)    #places the same filenames, but in a sub-folder called "best"
 
         self.fc1 = nn.Linear(*self.input_dims, self.fc1_dims)
         self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
@@ -115,7 +123,7 @@ class ActorNetwork(nn.Module):
         self.mu.bias.data.uniform_(-f3, f3)
 
         self.optimizer = optim.Adam(self.parameters(), lr=alpha)
-        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cuda:1')
+        self.device = T.device('cuda:0' if T.cuda.is_available() else 'cpu')     #if cuda is not available, we should use 'cpu' instead
 
         self.to(self.device)
 
@@ -127,18 +135,23 @@ class ActorNetwork(nn.Module):
         x = self.bn2(x)
         x = F.relu(x)
         x = T.tanh(self.mu(x))
-
         return x
 
     def save_checkpoint(self):
         print('... saving checkpoint ...')
-        T.save(self.state_dict(), self.checkpoint_file)
+        #for resumption of training, the optimizer is necessary to be saved to aid in retraining. 
+        #Otherwise, the network will go through all the 'lessons learnt' from the past again.
+        T.save({self.name + "_model_state_dict": self.state_dict(),
+                self.name + "_optim_state_dict": self.optimizer.state_dict()},  
+                self.checkpoint_file)
 
     def load_checkpoint(self):
         print('... loading checkpoint ...')
-        self.load_state_dict(T.load(self.checkpoint_file))
-
+        saved_data = T.load(self.checkpoint_file)
+        self.load_state_dict(saved_data[self.name + "_model_state_dict"])
+        self.optimizer.load_state_dict(saved_data[self.name + "_optim_state_dict"])
+        self.train()     #puts the network in a training mode.
+        
     def save_best(self):
         print('... saving best checkpoint ...')
-        checkpoint_file = os.path.join(self.checkpoint_dir, self.name+'_best')
-        T.save(self.state_dict(), checkpoint_file)
+        T.save(self.state_dict(), self.checkpoint_file_best)    #places the same filenames, but in a sub-folder called "best"
